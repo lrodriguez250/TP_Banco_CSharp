@@ -205,3 +205,9 @@ De esta manera se garantiza el flujo completo solicitado para el trabajo prácti
 # Repositorio
 
 Proyecto desarrollado para la materia Programación III utilizando C#, PHP y MySQL.
+
+# Aclaración
+## Aclaración
+
+Se creó un proyecto adicional llamado **BancoCSharp** para implementar la conexión con MySQL y realizar las pruebas de administración del sistema (alta de tarjetas, consultas y liquidaciones).
+
