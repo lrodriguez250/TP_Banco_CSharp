@@ -55,3 +55,8 @@ Para optimizar los tiempos de la cursada, quedan **excluidos** de este trabajo p
 *¡Mucho éxito en el desarrollo! Ante cualquier duda, recordá consultar vía Teams o durante las clases presenciales.*
 
 Osvaldo Cantone
+
+Participantes
+Lorenzo Rodriguez Wilson 
+legajo: 30250
+DNI: 46-165-137
