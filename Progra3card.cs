@@ -1,5 +1,5 @@
 using System;
-using MySql.Data.MySqlClient; 
+using MySql.Data.MySqlClient;
 
 namespace Progra3Card.Administrativo
 {
@@ -53,7 +53,7 @@ namespace Progra3Card.Administrativo
             // === A realizar ===
             // Aquí deben implementar un SELECT sobre la tabla 'tarjetas'
             // para recorrer las filas e imprimirlas en la consola.
-            
+
             ObtenerYMostrarTarjetas();
 
             Console.WriteLine("\nPresione una tecla para volver al menú...");
@@ -70,7 +70,7 @@ namespace Progra3Card.Administrativo
             // === A realizar ===
             // Aquí deben realizar un SELECT con un JOIN entre 'tarjetas' y 'usuarios' 
             // filtrando por el numCuenta para traer todos los campos (Nombre, Apellido, Email, Saldo, etc.)
-            
+
             MostrarDetalleCompleto(numCuenta);
 
             Console.WriteLine("\nPresione una tecla para volver al menú...");
@@ -88,14 +88,14 @@ namespace Progra3Card.Administrativo
             Console.WriteLine("\n⚠️ ADVERTENCIA: Se eliminará la tarjeta, sus liquidaciones y los datos de acceso web vinculados.");
             Console.ResetColor();
             Console.Write("¿Está seguro de continuar? (S/N): ");
-            
+
             if (Console.ReadLine().ToUpper() == "S")
             {
                 // === A realizar ===
                 // Aquí deben ejecutar un DELETE sobre la tabla 'tarjetas' donde num_cuenta = numCuenta.
                 // Como definimos ON DELETE CASCADE en la base de datos, las liquidaciones se borrarán solas.
                 // Opcional: Evaluar si también eliminan al usuario de la tabla 'usuarios' o si lo mantienen.
-                
+
                 bool exito = DarDeBajaTarjeta(numCuenta);
 
                 if (exito)
@@ -119,20 +119,181 @@ namespace Progra3Card.Administrativo
 
         static void ObtenerYMostrarTarjetas()
         {
-            // Completar 
-            // Ejemplo de impresión dentro del bucle: 
-            // Console.WriteLine("{0,-12} {1,-18} {2,-20} {3,-15}", reader["num_cuenta"], reader["numero_tarjeta"], ...);
+            using (MySqlConnection conn = new MySqlConnection(connectionString))
+            {
+                conn.Open();
+
+                string query = "SELECT num_cuenta, numero_tarjeta, banco_emisor, dni_titular FROM tarjetas";
+
+                MySqlCommand cmd = new MySqlCommand(query, conn);
+                MySqlDataReader reader = cmd.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    Console.WriteLine("{0,-12} {1,-18} {2,-20} {3,-15}",
+                        reader["num_cuenta"],
+                        reader["numero_tarjeta"],
+                        reader["banco_emisor"],
+                        reader["dni_titular"]);
+                }
+
+                reader.Close();
+            }
         }
 
         static void MostrarDetalleCompleto(int cuenta)
         {
-            // Completar haciendo un SELECT con JOIN de usuarios y tarjetas WHERE num_cuenta = @cuenta
+            using (MySqlConnection conn = new MySqlConnection(connectionString))
+            {
+                conn.Open();
+
+                string query = @"
+                 SELECT u.nombre, u.apellido, u.email,
+                t.num_cuenta, t.numero_tarjeta, t.saldo, t.estado
+                FROM usuarios u
+                INNER JOIN tarjetas t ON u.documento = t.dni_titular
+                WHERE t.num_cuenta = @cuenta";
+
+                MySqlCommand cmd = new MySqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@cuenta", cuenta);
+
+                MySqlDataReader reader = cmd.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    Console.WriteLine("\n--- DETALLE COMPLETO ---");
+                    Console.WriteLine("Nombre: " + reader["nombre"] + " " + reader["apellido"]);
+                    Console.WriteLine("Email: " + reader["email"]);
+                    Console.WriteLine("Cuenta: " + reader["num_cuenta"]);
+                    Console.WriteLine("Tarjeta: " + reader["numero_tarjeta"]);
+                    Console.WriteLine("Saldo: $" + reader["saldo"]);
+                    Console.WriteLine("Estado: " + reader["estado"]);
+                }
+                else
+                {
+                    Console.WriteLine("No se encontró la cuenta.");
+                }
+
+                reader.Close();
+            }
         }
 
         static bool DarDeBajaTarjeta(int cuenta)
         {
-            // Completar usando un DELETE FROM tarjetas WHERE num_cuenta = @cuenta
-            return false;
+            using (MySqlConnection conn = new MySqlConnection(connectionString))
+            {
+                conn.Open();
+
+                string query = "DELETE FROM tarjetas WHERE num_cuenta = @cuenta";
+
+                MySqlCommand cmd = new MySqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@cuenta", cuenta);
+
+                int filas = cmd.ExecuteNonQuery();
+
+                return filas > 0;
+            }
+
         }
+
+        static void MenuEmitirTarjeta()
+        {
+
+            Console.Clear();
+            Console.WriteLine("--- EMITIR TARJETA ---");
+
+            Console.Write("DNI: ");
+            string dni = Console.ReadLine();
+
+            Console.Write("Cuenta: ");
+            int cuenta = Convert.ToInt32(Console.ReadLine());
+
+            Console.Write("Número tarjeta: ");
+            string tarjeta = Console.ReadLine();
+
+            Console.Write("Banco: ");
+            string banco = Console.ReadLine();
+
+            Console.Write("Saldo: ");
+            decimal saldo = Convert.ToDecimal(Console.ReadLine());
+
+            EmitirTarjeta(dni, cuenta, tarjeta, banco, saldo);
+
+            Console.WriteLine("\n✔ Tarjeta creada correctamente");
+            Console.ReadKey();
+
+        }
+        static void EmitirTarjeta(string dni, int cuenta, string tarjeta, string banco, decimal saldo)
+        {
+            using (MySqlConnection conn = new MySqlConnection(connectionString))
+            {
+                conn.Open();
+
+                string query = @"
+                    INSERT INTO tarjetas (num_cuenta, numero_tarjeta, banco_emisor, estado, saldo, dni_titular)
+                    VALUES (@cuenta, @tarjeta, @banco, 'Activa', @saldo, @dni)";
+
+                MySqlCommand cmd = new MySqlCommand(query, conn);
+
+                cmd.Parameters.AddWithValue("@cuenta", cuenta);
+                cmd.Parameters.AddWithValue("@tarjeta", tarjeta);
+                cmd.Parameters.AddWithValue("@banco", banco);
+                cmd.Parameters.AddWithValue("@saldo", saldo);
+                cmd.Parameters.AddWithValue("@dni", dni);
+
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        static void MenuEmitirLiquidacion()
+        {
+            Console.Clear();
+            Console.WriteLine("--- EMITIR LIQUIDACIÓN MENSUAL ---");
+
+            Console.Write("Número de cuenta: ");
+            int cuenta = Convert.ToInt32(Console.ReadLine());
+
+            Console.Write("Período (YYYY-MM): ");
+            string periodo = Console.ReadLine();
+
+            Console.Write("Fecha de vencimiento (YYYY-MM-DD): ");
+            string vencimiento = Console.ReadLine();
+
+            Console.Write("Total a pagar: ");
+            decimal total = Convert.ToDecimal(Console.ReadLine());
+
+            Console.Write("Pago mínimo: ");
+            decimal minimo = Convert.ToDecimal(Console.ReadLine());
+
+            EmitirLiquidacion(cuenta, periodo, vencimiento, total, minimo);
+
+            Console.WriteLine("\n✔ Liquidación emitida correctamente");
+            Console.ReadKey();
+        }
+
+        static void EmitirLiquidacion(int cuenta, string periodo, string vencimiento, decimal total, decimal minimo)
+        {
+            using (MySqlConnection conn = new MySqlConnection(connectionString))
+            {
+                conn.Open();
+
+                string query = @"
+        INSERT INTO liquidaciones 
+        (num_cuenta, periodo, fecha_vencimiento, total_a_pagar, pago_minimo)
+        VALUES (@cuenta, @periodo, @vencimiento, @total, @minimo)";
+
+                MySqlCommand cmd = new MySqlCommand(query, conn);
+
+                cmd.Parameters.AddWithValue("@cuenta", cuenta);
+                cmd.Parameters.AddWithValue("@periodo", periodo);
+                cmd.Parameters.AddWithValue("@vencimiento", vencimiento);
+                cmd.Parameters.AddWithValue("@total", total);
+                cmd.Parameters.AddWithValue("@minimo", minimo);
+
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+
     }
 }
